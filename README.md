@@ -2,20 +2,52 @@
 
 Pre-flight security checks for git push. Ensures your code is safe and up-to-date before pushing to remote repositories.
 
+## Quickstart
+
+```bash
+git clone https://github.com/mdwcoder/pushguard.git
+cd pushguard
+bash init.sh
+pushguard --help
+```
+
+If `init.sh` is not executable: `chmod +x init.sh && ./init.sh`.
+
+`init.sh` will try to install `pushguard` using `pipx` (preferred). If `pipx` is not available it creates a per-user virtualenv at `~/.local/pushguard/venv`, installs the package, and links the `pushguard` CLI into `~/.local/bin`.
+
+By default `init.sh` can add a short shell alias `pushg` that points to `pushguard`. We deliberately avoid the historical `pg` alias because `pg` may collide with the system pager on some platforms.
+
 ## Installation
 
-### Recommended: pipx (isolated environment)
+Recommended (from source)
+
 ```bash
-pipx install pushguard
+git clone https://github.com/mdwcoder/pushguard.git
+cd pushguard
+bash init.sh
 ```
 
-### Alternative: pip
+If you prefer manual/development installs, use one of the alternatives below.
+
+Alternative (development with pipx)
+
 ```bash
-pip install --user pushguard
+# for local editable install via pipx
+pipx install -e .
 ```
 
-### Windows
-Use Git Bash or WSL for best compatibility. PowerShell may work but Git Bash is recommended.
+Alternative (pip)
+
+```bash
+# editable local install for development
+pip install -e .
+# or, if published to PyPI:
+# pip install --user pushguard
+```
+
+Platform notes
+
+Linux / macOS: recommended. Windows: use Git Bash or WSL for compatibility.
 
 ## Basic Usage
 
