@@ -4,11 +4,12 @@ from rich.table import Table
 from rich.text import Text
 from typing import List
 from ..checks import CheckResult
+from .. import __version__
 
 console = Console()
 
 def render_checks(results: List[CheckResult], repo_path: str, remote: str, branch: str):
-    console.print(Panel.fit(f"[bold blue]pushguard[/bold blue] - {repo_path} -> {remote}/{branch}"))
+    console.print(Panel.fit(f"[bold blue]pushguard v{__version__}[/bold blue] - {repo_path} -> {remote}/{branch}"))
 
     table = Table(title="Security Checks")
     table.add_column("Check", style="cyan")

@@ -10,6 +10,8 @@ from .checks.gitignore_check import check_gitignore
 from .checks.env_ignore_check import check_env_ignore
 from .checks.env_value_leak_check import check_env_value_leak
 from .checks.pattern_secrets_check import check_pattern_secrets
+from .checks.sync_check import check_sync
+from .checks.autopull_check import check_autopull
 from .reporting.console import render_checks
 from .reporting.report_txt import generate_report
 
@@ -26,16 +28,13 @@ def main(
     force: bool = typer.Option(False, "--force", help="Force push even with blocks"),
     no_gitignore_check: bool = typer.Option(False, "--no-gitignore-check", help="Skip gitignore check"),
     cd_root: bool = typer.Option(False, "--cd-root", help="Auto cd to repo root"),
+    no_fetch: bool = typer.Option(False, "--no-fetch", help="Skip fetch before sync check"),
+    no_sync_check: bool = typer.Option(False, "--no-sync-check", help="Skip sync check"),
+    autopull: Optional[str] = typer.Option(None, "--autopull", help="Auto-pull mode: rebase or merge"),
 ):
-    if short:
-        if remote_pos:
-            remote = remote_pos
-        if branch_pos:
-            branch = branch_pos
-    else:
-        if remote_pos or branch_pos:
-            typer.echo("Error: Positional arguments not allowed without --short.", err=True)
-            sys.exit(2)
+    if autopull and autopull not in ["rebase", "merge"]:
+        typer.echo("Error: --autopull must be 'rebase' or 'merge'.", err=True)
+        sys.exit(2)
     cwd = Path.cwd()
     repo_root = get_repo_root(cwd)
 
@@ -84,6 +83,26 @@ def main(
 
     # Run checks
     results = []
+    sync_result = check_sync(repo_root, remote, branch, no_fetch, no_sync_check)
+    results.append(sync_result)
+
+    # Calculate ahead/behind for autopull
+    from .git import rev_list_ahead_behind, get_upstream_ref
+    upstream_ref = get_upstream_ref(repo_root)
+    if upstream_ref:
+        local_ref = f"refs/heads/{branch}"
+        ahead, behind = rev_list_ahead_behind(local_ref, upstream_ref, repo_root)
+    else:
+        ahead, behind = 0, 0
+
+    autopull_result = check_autopull(repo_root, remote, branch, autopull, ahead, behind)
+    results.append(autopull_result)
+
+    # If autopull succeeded, re-check sync
+    if autopull_result.status == "OK" and autopull:
+        sync_result = check_sync(repo_root, remote, branch, True, False)  # no fetch
+        results[0] = sync_result  # Update sync result
+
     results.append(check_gitignore(repo_root, no_gitignore_check))
     results.append(check_env_ignore(repo_root, config.env_patterns, config.allowlist_env_templates))
     results.append(check_env_value_leak(repo_root, config.env_patterns, config.allowlist_env_templates, config.min_secret_length, config.exclude_dirs, config.scan_extensions))
@@ -94,7 +113,7 @@ def main(
     has_blocks = any(r.status == "BLOCK" for r in results)
 
     if has_blocks:
-        report_path = generate_report(results, repo_root)
+        report_path = generate_report(results, repo_root, autopull)
         typer.echo(f"Report generated: {report_path}")
         if not force:
             typer.echo("Blocked: Fix issues or use --force.")
@@ -113,6 +132,8 @@ def main(
         sys.exit(0)
     except subprocess.CalledProcessError as e:
         typer.echo(f"Git push failed with exit code {e.returncode}.", err=True)
+        typer.echo(e.stdout)
+        typer.echo(e.stderr, err=True)
         sys.exit(e.returncode)
 
 if __name__ == "__main__":
