@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pushguard"
+version = "0.1.0"
+description = "Pre-flight security checks for git push"
+authors = [{name = "Your Name"}]
+requires-python = ">=3.10"
+dependencies = [
+    "typer",
+    "rich",
+    "tomli; python_version<'3.11'"
+]
+
+[project.scripts]
+pushguard = "pushguard.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
