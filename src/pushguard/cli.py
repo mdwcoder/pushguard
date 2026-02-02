@@ -15,7 +15,7 @@ from .reporting.report_txt import generate_report
 
 app = typer.Typer()
 
-@app.callback()
+@app.command()
 def main(
     remote_pos: Optional[str] = typer.Argument(None),
     branch_pos: Optional[str] = typer.Argument(None),
